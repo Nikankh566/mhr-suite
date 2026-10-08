@@ -9,7 +9,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey.svg)](#)
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue.svg)](apps/mhr-tunnel/)
-[![Release](https://img.shields.io/badge/release-v1.0.0-green.svg)](https://github.com/Nikankh566/mhr-suite/releases)
+[![Release](https://img.shields.io/badge/release-v2.0.0-green.svg)](https://github.com/Nikankh566/mhr-suite/releases)
 
 *Your traffic travels inside TLS connections that only show `www.google.com`
 to the network — then hops through **your own** Google Apps Script and
@@ -30,8 +30,8 @@ to the network — then hops through **your own** Google Apps Script and
 |---|---|
 | 🛰️ **Relay exit** | `deploy/cloudflare-worker/worker.js` — Cloudflare Worker that fetches target sites |
 | 🔀 **Google front** | `deploy/gas/Code.gs` — your Apps Script; the network only sees `www.google.com` |
-| 🛠️ **Management panel** | `deploy/panel/panel.js` — web panel: relay tests, config generator, Xray configs, key rotation |
-| 💻 **MHR Tunnel** | `apps/mhr-tunnel/` — advanced Python desktop app: one-click connect, system-wide proxy, live dashboard |
+| 🛠️ **Management panel** | `deploy/panel/panel.js` — web panel: relay tests **with latency**, config generator, Xray configs, **config library**, settings export/import, key rotation |
+| 💻 **MHR Tunnel v2** | `apps/mhr-tunnel/` — advanced Python desktop app: **animated UI**, one-click connect, system-wide proxy, live dashboard, **Connection Doctor**, FA/EN |
 
 ## 🔁 How it works
 
@@ -145,16 +145,20 @@ place next to `main.py` → `python main.py` → set browser proxy to
 
 ---
 
-## 💻 MHR Tunnel — desktop app
+## 💻 MHR Tunnel v2 — desktop app
 
 One-click app that tunnels the **whole computer** (not just the browser):
 
+- 🌀 **Animated interface** — pulsing status orb, live traffic graph, eased counters
 - 🖱️ **One-click connect** — sets the OS proxy on connect, restores it on disconnect
 - 👤 **Profiles** — multiple relays, switch in one click
 - 📊 **Live dashboard** — requests, data volume, latency, uptime, top sites
-- 🧪 **Relay test** — full-chain health check without leaving the app
+- 🩺 **Connection Doctor** — probes every hop (DNS → google.com:443 → Apps Script → Worker)
+  and tells you honestly whether the relay path is usable right now
+- 🌐 **FA / EN** — one-click language toggle
+- ⬆️ **Auto-update check** — notifies when a new release is out
+- 🧪 **Relay test** — full-chain health check with latency readout
 - 📡 **Google IP scanner** — finds the fastest front IP
-- 📝 **Color-coded log viewer**
 - ⌨️ **Headless mode** — `python mhr_tunnel.py --no-gui --profile "My Relay"`
 
 Works on **Windows** (registry), **macOS** (`networksetup`) and **Linux** (GNOME).
@@ -165,10 +169,11 @@ After logging in, the panel gives you:
 
 | Tab | What it does |
 |---|---|
-| 🧪 Test | Worker health check + full `google.com → GAS → Worker` chain test |
+| 🧪 Test | Worker health check + full `google.com → GAS → Worker` chain test, **with latency (ms)** |
 | 📦 Build config | Generates ready-to-use `config.json` for the local client |
 | 🔀 Xray config | Generates `xray-config.json` (import into NekoBox / Hiddify) |
 | 🔑 Rotate key | Generates a new AUTH_KEY (+ redeploy instructions) |
+| 📚 Config library | Save, load and delete **named** relay configs in the browser |
 
 > ⚠️ Xray configs still need the local MHR client running — Xray forwards
 > traffic into the relay; the Google fronting happens in the local client.
