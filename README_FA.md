@@ -1,224 +1,182 @@
-# مجموعه MHR — رلهٔ دامنه‌محور + پنل مدیریت
+<div align="center">
 
-> **English:** for the full English guide, read [README.md](README.md).
+# 🛰️ مجموعه MHR
 
-یک کیت کامل و خودمیزبان برای عبور از سانسور: ترافیک شما داخل اتصال‌های TLS
-می‌رود که برای شبکه **فقط `www.google.com`** دیده می‌شود، از یک Google Apps Script
-که متعلق به خودتان است عبور می‌کند و از یک Cloudflare Worker که متعلق به
-خودتان است خارج می‌شود. یک پنل مدیریت وب هم دارید که با آن رله را تست می‌کنید،
-کانفیگ آمادهٔ کلاینت (از جمله با فرمت Xray/v2ray) می‌سازید و کلید امنیتی را
-می‌چرخانید.
+### کیت رلهٔ دامنه‌محور — Cloudflare Worker + Google Apps Script + پنل مدیریت + اپ دسکتاپ
+
+**English:** full English guide in [README.md](README.md)
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey.svg)](#)
+[![Python](https://img.shields.io/badge/python-3.10%2B-blue.svg)](apps/mhr-tunnel/)
+[![Release](https://img.shields.io/badge/release-v1.0.0-green.svg)](https://github.com/Nikankh566/mhr-suite/releases)
+
+*ترافیک شما داخل اتصال‌های TLS می‌رود که برای شبکه فقط `www.google.com`
+دیده می‌شود — بعد از Google Apps Scriptِ خودتان و Cloudflare Workerِ خودتان
+عبور می‌کند و به اینترنت واقعی می‌رسد.*
+
+[🚀 شروع سریع](#-نصب--صفر-تا-صد) •
+[💻 اپ MHR Tunnel](#-mhr-tunnel--اپ-دسکتاپ) •
+[🛠️ پنل مدیریت](#%EF%B8%8F-پنل-مدیریت) •
+[❓ عیب‌یابی](#-عیبیابی)
+
+</div>
+
+---
+
+## ✨ چه چیزهایی می‌گیرید
+
+| جزء | توضیح |
+|---|---|
+| 🛰️ **خروجی رله** | `deploy/cloudflare-worker/worker.js` — ورکر کلادفلر که سایت مقصد را فچ می‌کند |
+| 🔀 **فرانت گوگل** | `deploy/gas/Code.gs` — اسکریپت شما؛ شبکه فقط `www.google.com` را می‌بیند |
+| 🛠️ **پنل مدیریت** | `deploy/panel/panel.js` — پنل وب: تست رله، سازندهٔ کانفیگ، کانفیگ Xray، چرخش کلید |
+| 💻 **MHR Tunnel** | `apps/mhr-tunnel/` — اپ پیشرفتهٔ پایتون: اتصال تک‌کلیک، پروکسی سیستمی، داشبورد زنده |
+
+## 🔁 طرز کار
 
 ```
 دستگاه شما
     │
-    │  کلاینت محلی (پروکسی HTTP روی 127.0.0.1:8085)
+    │  MHR Tunnel (پروکسی محلی 127.0.0.1:8085)
     ▼
-www.google.com   ◄── ISP / DPI فقط همین را می‌بیند (TLS رمزشده، SNI = www.google.com)
+www.google.com   ◄── ISP فقط همین را می‌بیند (TLS رمزشده)
     │
     │  Google Apps Script (حساب گوگل خودتان)
     ▼
 Cloudflare Worker (حساب کلادفلر خودتان)  ◄── سایت واقعی را فچ می‌کند
     │
     ▼
-سایت مقصد
+سایت مقصد 🌍
 ```
 
-**اجزا**
-
-| مسیر | چیست |
-|---|---|
-| `deploy/cloudflare-worker/worker.js` | خروجی رله: درخواست‌ها را از Apps Script می‌گیرد، سایت مقصد را فچ می‌کند و برمی‌گرداند |
-| `deploy/gas/Code.gs` | فرانت Google Apps Script: درخواست‌ها را احراز هویت می‌کند و به Worker می‌فرستد |
-| `deploy/panel/panel.js` | پنل مدیریت (Worker): تست رله، سازندهٔ `config.json`، سازندهٔ کانفیگ Xray، چرخش کلید |
-| `client/config.example.json` | قالب کانفیگ کلاینت محلی |
-
-**خلاصهٔ طرز کار:** کلاینت روی کامپیوتر شما ترافیک مرورگر را می‌گیرد و — در قالب
-ترافیک عادی گوگل — به Apps Script شما می‌فرستد. اسکریپت آن را به Cloudflare Worker
-شما می‌دهد، Worker سایت واقعی را فچ می‌کند و جواب از همان مسیر برمی‌گردد. ناظر
-شبکه فقط ترافیک رمزشده به `www.google.com` می‌بیند.
-
-**محدودیت‌ها (قبل از شروع بخوانید):**
-- این روش برای **اختلال جزئی** است (فیلترینگ/کندی در حالی که اینترنت بین‌الملل
-  وصل است). در **قطعی کامل** (فقط اینترانت ملی کار می‌کند و `google.com` قطع است)
-  هیچ رلهٔ نرم‌افزاری‌ای کار نمی‌کند — آن‌وقت فقط لینک ماهواره‌ای، دریافت
-  یک‌طرفهٔ ماهواره‌ای، مش محلی یا دسترسی ویژه جواب می‌دهد.
-- گوگل سایت‌هایی که از طریق Apps Script شما فچ می‌شوند را می‌بیند (مثل هر
-  پروکسی میزبانی‌شدهٔ دیگری).
-- سهمیهٔ رایگان Apps Script: حدود ۲۰٬۰۰۰ فچ در روز — برای یک نفر کافی است.
+**قبل از شروع بدانید:**
+- ✅ برای **اختلال جزئی** ساخته شده (فیلترینگ/کندی وقتی اینترنت بین‌الملل وصل است).
+- ⚠️ در **قطعی کامل** هیچ رلهٔ نرم‌افزاری‌ای کار نمی‌کند.
+- 📊 سهمیهٔ رایگان Apps Script حدود ۲۰٬۰۰۰ فچ در روز است — برای مصرف شخصی کافی است.
 
 ---
 
-## پیش‌نیازها
+## 🚀 نصب — صفر تا صد
 
-- حساب **Cloudflare** (پلن رایگان کافی است)
+<details>
+<summary><b>پیش‌نیازها</b></summary>
+
+- حساب **Cloudflare** (رایگان کافی است)
 - حساب **Google** (هر Gmail)
-- **Python 3.8+** روی کامپیوتری که کلاینت محلی را اجرا می‌کند
-- خود کلاینت محلی: [`mhr-cfw`](https://github.com/denuitt1/mhr-cfw)
-  (فایل‌های `main.py` و `requirements.txt` از آن ریپو)
+- **Python 3.10+** روی کامپیوتری که کلاینت را اجرا می‌کند
 
----
+</details>
 
-## نصب — صفر تا صد
+### قدم ۱ — دیپلوی Worker رله ☁️
 
-### قدم ۰ — گرفتن فایل‌ها
-
-ریپو را کلون کنید (یا به‌صورت ZIP دانلود کنید):
-
-```bash
-git clone https://github.com/<your-username>/mhr-suite.git
-cd mhr-suite
-```
-
-کلاینت محلی را هم کلون کنید (فقط `main.py` و `requirements.txt` و
-`setup.py` و `run.sh`/`run.bat` و پوشهٔ `src/` لازم است):
-
-```bash
-git clone https://github.com/denuitt1/mhr-cfw.git
-```
-
-### قدم ۱ — دیپلوی Worker رله (کلادفلر)
-
-۱. وارد [dash.cloudflare.com](https://dash.cloudflare.com) شوید.
-۲. از سایدبار: **Compute → Workers & Pages** → **Create** → **Create Worker**
-   (با قالب "Hello World" شروع کنید).
-۳. اسم بدهید، مثلاً `mhr-relay`، و دیپلوی کنید.
-۴. **Edit code** را بزنید و **همهٔ** کد پیش‌فرض را پاک کنید.
-۵. فایل `deploy/cloudflare-worker/worker.js` همین ریپو را باز کنید، همه‌اش را
-   کپی کنید و در ادیتور پیست کنید.
-۶. بالای کد، `WORKER_URL` را با هاست‌ نیم Worker خودتان ست کنید، مثلاً:
+۱. وارد [داشبورد کلادفلر](https://dash.cloudflare.com) شوید
+۲. **Compute → Workers & Pages → Create → Create Worker**
+۳. اسم `mhr-relay` → Deploy
+۴. **Edit code** → همه را پاک کنید → محتوای `deploy/cloudflare-worker/worker.js` را پیست کنید
+۵. بالای فایل هاست خودتان را بگذارید:
    ```js
    const WORKER_URL = "mhr-relay.<your-subdomain>.workers.dev";
    ```
-   (این فقط جلوی لوپِ فچِ تصادفیِ خودش را می‌گیرد.)
-۷. **Deploy** را بزنید. آدرس رلهٔ شما می‌شود:
-   `https://<worker-name>.<your-subdomain>.workers.dev`
-۸. تست سریع: آن آدرس را در مرورگر باز کنید — باید ببینید:
-   `{"e":"Relay is Active."}`
+۶. **Deploy** ✅ — آدرس را باز کنید، باید `{"e":"Relay is Active."}` ببینید
 
-### قدم ۲ — دیپلوی پنل مدیریت (کلادفلر)
+### قدم ۲ — دیپلوی پنل مدیریت 🛠️
 
-مثل قدم ۱، با این تفاوت‌ها:
+مثل قدم ۱، با فایل `deploy/panel/panel.js` در ورکری به اسم `mhr-panel`.
+**رمز پنل را عوض کنید:**
 
-۱. یک Worker دیگر بسازید، مثلاً با اسم `mhr-panel`.
-۲. محتوای `deploy/panel/panel.js` را پیست کنید.
-۳. **مهم:** رمز پنل را بالای کد عوض کنید:
+```js
+const PANEL_PASSWORD = "CHANGE_ME_TO_A_STRONG_PANEL_PASSWORD";
+```
+
+### قدم ۳ — دیپلوی Google Apps Script 📜
+
+۱. [script.google.com](https://script.google.com) → **New project**
+۲. کد پیش‌فرض را پاک کنید → محتوای `deploy/gas/Code.gs` را پیست کنید
+۳. مقادیر خودتان:
    ```js
-   const PANEL_PASSWORD = "CHANGE_ME_TO_A_STRONG_PANEL_PASSWORD";
+   const AUTH_KEY   = "CHANGE_ME_TO_A_STRONG_SECRET";
+   const WORKER_URL = "https://mhr-relay.<your-subdomain>.workers.dev";
    ```
-   یک رشتهٔ تصادفی طولانی بگذارید. هرکس آدرس + رمز را داشته باشد می‌تواند رله
-   را مدیریت کند — محرمانه نگهش دارید.
-۴. دیپلوی کنید و آدرس پنل را باز کنید — باید صفحهٔ ورود را ببینید.
+۴. **Deploy → New deployment → ⚙ Web app** → *Execute as:* Me، *Who has access:* Anyone
+۵. Authorize کنید و **Deployment ID** را کپی کنید
 
-### قدم ۳ — دیپلوی Google Apps Script
+> برای به‌روزرسانی: **Deploy → Manage deployments → ✏️ → New version**
 
-۱. به [script.google.com](https://script.google.com) بروید، با حساب گوگل خودتان
-   وارد شوید و **New project** را بزنید.
-۲. کد پیش‌فرض ادیتور را پاک کنید.
-۳. فایل `deploy/gas/Code.gs` همین ریپو را کپی و پیست کنید.
-۴. بالای کد، مقادیر خودتان را بگذارید:
-   ```js
-   const AUTH_KEY = "CHANGE_ME_TO_A_STRONG_SECRET";   // رشتهٔ تصادفی طولانی، مثل رمز نگهش دارید
-   const WORKER_URL = "https://mhr-relay.<your-subdomain>.workers.dev";  // از قدم ۱
-   ```
-۵. ذخیره کنید (Ctrl/Cmd+S).
-۶. **Deploy → New deployment** → آیکون چرخ‌دنده ⚙ → **Web app**.
-   - **Execute as:** گزینهٔ Me (حساب خودتان)
-   - **Who has access:** گزینهٔ Anyone
-۷. **Deploy** را بزنید و وقتی گوگل دسترسی خواست، Authorize کنید.
-۸. **Deployment ID** (یک رشتهٔ تصادفی طولانی) را کپی کنید — در قدم بعد لازم است.
+### قدم ۴ — تنظیم پنل ⚙️
 
-> نکته: برای به‌روزرسانی بعدی `Code.gs` دیپلویمنت جدید نسازید — بروید به
-> **Deploy → Manage deployments → ✏️ → Version: New version → Deploy**.
-> Deployment ID ثابت می‌ماند.
+وارد پنل شوید → **تنظیمات اتصال** → آدرس Worker، Deployment ID و AUTH_KEY →
+**ذخیره**. بعد:
 
-### قدم ۴ — تنظیم پنل
+- **🧪 تست Worker** — آیا رله روی کلادفلر زنده است؟
+- **🧪 تست کامل زنجیره** — درخواست واقعی از مسیر `google.com ← Apps Script ← Worker`
 
-۱. آدرس پنل را باز کنید و با رمز پنل وارد شوید.
-۲. در بخش **تنظیمات اتصال** پر کنید:
-   - آدرس Worker (از قدم ۱)
-   - Deployment ID (از قدم ۳)
-   - کلید امنیتی AUTH_KEY (از قدم ۳)
-۳. **ذخیرهٔ تنظیمات** را بزنید (فقط در localStorage مرورگر خودتان ذخیره می‌شود).
+### قدم ۵ — اجرای MHR Tunnel 💻
 
-### قدم ۵ — تست همه‌چیز از داخل پنل
+```bash
+cd apps/mhr-tunnel
+pip install -r requirements.txt
+# لینوکس: sudo apt install python3-tk
+python mhr_tunnel.py
+```
 
-- **تست Worker** — چک می‌کند کد رله روی کلادفلر فعال است.
-- **تست کامل زنجیره** — یک درخواست واقعی از مسیر
-  `google.com ← Apps Script ← Worker` می‌فرستد و `example.com` را فچ می‌کند.
-  اگر موفق گزارش داد، کل زنجیره سرتاسری کار می‌کند.
-
-### قدم ۶ — اجرای کلاینت محلی
-
-۱. وابستگی‌ها را نصب کنید:
-   ```bash
-   cd mhr-cfw
-   pip install -r requirements.txt
-   ```
-۲. در پنل، تب **ساخت کانفیگ** را باز کنید و **ساخت config.json** و بعد
-   **دانلود فایل** را بزنید. (Deployment ID و AUTH_KEY شما خودکار پر می‌شود.)
-۳. `config.json` را کنار `main.py` بگذارید و اجرا کنید:
-   ```bash
-   python main.py
-   # ویندوز: run.bat | لینوکس: ./run.sh
-   ```
-   اجرای اول ممکن است رمز سیستم را بخواهد تا یک سرتیفیکیت محلی نصب کند
-   (روی کامپیوتر خودتان ساخته می‌شود و هیچ‌جا نمی‌رود).
-۴. باید ببینید پروکسی HTTP روی `127.0.0.1:8085` بالا آمده است.
-
-### قدم ۷ — وصل کردن مرورگر به پروکسی
-
-**فایرفاکس (پیشنهادی):** تنظیمات → جست‌وجوی "proxy" → Network Settings →
-Manual proxy configuration → HTTP Proxy برابر `127.0.0.1`، پورت `8085` →
-تیک "Also use this proxy for HTTPS".
-
-**کروم/اج:** با افزونهٔ FoxyProxy / Proxy SwitchyOmega روی `127.0.0.1:8085`.
-
-**کل سیستم (نمونه):** پروکسی HTTP/HTTPS را `127.0.0.1:8085` بگذارید.
-
-یک سایت مسدود را باز کنید — باید لود شود. تست کامل زنجیره در پنل سریع‌ترین
-راه برای فهمیدن این است که مشکل از ستاپ شماست یا از شبکه.
-
-### قدم ۸ — (اختیاری) کانفیگ Xray / فرمت v2ray
-
-تب **کانفیگ Xray** پنل یک فایل `xray-config.json` می‌سازد (ورودی SOCKS روی
-`127.0.0.1:10808`، خروجی HTTP به رلهٔ محلی روی `127.0.0.1:8085`).
-می‌توانید آن را در NekoBox / Hiddify (کانفیگ دستی) ایمپورت کنید یا مستقیم با
-`xray` اجرا کنید. **کلاینت محلی MHR باید روشن باشد** — Xray فقط ترافیک را به
-رله می‌دهد؛ قایم شدن پشت گوگل در کلاینت محلی انجام می‌شود.
-
-### قدم ۹ — چرخش کلید امنیتی
-
-اگر AUTH_KEY لو رفت:
-
-۱. در پنل، تب **چرخش کلید** → **ساخت کلید جدید**.
-۲. خط `AUTH_KEY` را در پروژهٔ Apps Script عوض کنید.
-۳. **Deploy → Manage deployments → ✏️ → New version → Deploy.**
-۴. در پنل یک `config.json` تازه بسازید (خودکار با کلید جدید ساخته می‌شود).
+۱. تب **Profiles** → Deployment ID و AUTH_KEY را وارد کنید
+۲. **Connect** را بزنید — اپ خودش **پروکسی سیستم** را ست می‌کند
+۳. وب‌گردی کنید 🌍 — با **Disconnect** همه‌چیز به حالت عادی برمی‌گردد
 
 ---
 
-## عیب‌یابی
+## 💻 MHR Tunnel — اپ دسکتاپ
 
-| علامت | علت محتمل / راه‌حل |
+اپ تک‌کلیکی که **کل کامپیوتر** را تانل می‌کند (نه فقط مرورگر):
+
+- 🖱️ **اتصال تک‌کلیک** — موقع وصل شدن پروکسی سیستم را ست می‌کند، موقع قطع شدن برمی‌گرداند
+- 👤 **پروفایل‌ها** — چند رله، جابه‌جایی با یک کلیک
+- 📊 **داشبورد زنده** — تعداد درخواست‌ها، حجم داده، تأخیر، آپ‌تایم، پرترافیک‌ترین سایت‌ها
+- 🧪 **تست رله** — چک سلامت زنجیره بدون خروج از اپ
+- 📡 **اسکنر IP گوگل** — پیدا کردن سریع‌ترین IP فرانت
+- 📝 **لاگ رنگی داخل اپ**
+- ⌨️ **حالت هدلس** — `python mhr_tunnel.py --no-gui --profile "My Relay"`
+
+روی **ویندوز**، **macOS** و **لینوکس** کار می‌کند.
+
+## 🛠️ پنل مدیریت
+
+| تب | کار |
 |---|---|
-| آدرس Worker عبارت "Relay is Active" را نشان نمی‌دهد | کد پیست/دیپلوی نشده — قدم ۱ را تکرار کنید |
-| تست کامل زنجیره: `unauthorized` | AUTH_KEY داخل Apps Script با تنظیمات پنل یکی نیست |
-| تست کامل زنجیره: timeout | `script.google.com` از شبکهٔ شما در دسترس نیست، یا Apps Script با دسترسی "Anyone" دیپلوی نشده |
-| مرورگر از طریق پروکسی چیزی لود نمی‌کند | کلاینت محلی روشن نیست، یا پروکسی مرورگر روی `127.0.0.1:8085` ست نشده |
-| ویدیوهای یوتیوب پخش نمی‌شوند | محدودیت شناخته‌شدهٔ Apps Script (`googlevideo.com` از داخل Apps Script در دسترس نیست). صفحه لود می‌شود؛ ویدیو نه |
-| لوپ CAPTCHA در بعضی سایت‌ها | خروجی Cloudflare Worker از IPهای چرخشی می‌آید — طبیعی است؛ اگر VPS دارید از forwarder آپشنال نسخهٔ آپ‌استریم استفاده کنید |
+| 🧪 تست | چک سلامت Worker + تست کامل زنجیره |
+| 📦 ساخت کانفیگ | تولید `config.json` آماده برای کلاینت |
+| 🔀 کانفیگ Xray | تولید `xray-config.json` (ایمپورت در NekoBox / Hiddify) |
+| 🔑 چرخش کلید | ساخت AUTH_KEY جدید + راهنمای دیپلوی مجدد |
 
-## نکته‌های امنیتی
+> ⚠️ کانفیگ Xray هم به کلاینت محلی MHR نیاز دارد — Xray فقط ترافیک را به رله می‌دهد.
 
-- `AUTH_KEY` و رمز پنل را مثل رمز عبور بدانید. مقادیر واقعی را **هیچ‌وقت**
-  کامیت نکنید — فایل‌های این ریپو عمداً placeholder دارند.
-- پنل تنظیمات شما را فقط در مرورگر (localStorage) نگه می‌دارد.
-- هرکس آدرس exec اسکریپت + AUTH_KEY شما را داشته باشد می‌تواند از سهمیهٔ رلهٔ
-  شما استفاده کند.
+---
 
-## سپاس
+## 🔑 چرخش کلید امنیتی
 
-ایده و پروتکل رله: [`denuitt1/mhr-cfw`](https://github.com/denuitt1/mhr-cfw)
-(MIT) با الهام از `masterking32/MasterHttpRelayVPN`. پنل مدیریت، راهنماها و
-بسته‌بندی: همین ریپو (MIT).
+۱. پنل → **چرخش کلید** → ساخت کلید جدید
+۲. `AUTH_KEY` را در Apps Script عوض کنید → **Deploy → Manage deployments → New version**
+۳. `config.json` تازه بسازید (یا پروفایل را در MHR Tunnel به‌روز کنید)
+
+## ❓ عیب‌یابی
+
+| علامت | راه‌حل |
+|---|---|
+| آدرس Worker عبارت Relay is Active را نشان نمی‌دهد | کد پیست/دیپلوی نشده — قدم ۱ را تکرار کنید |
+| تست زنجیره: `unauthorized` | AUTH_KEY با Apps Script یکی نیست |
+| تست زنجیره: timeout | `script.google.com` در دسترس نیست یا Apps Script با دسترسی Anyone دیپلوی نشده |
+| چیزی لود نمی‌شود | کلاینت روشن نیست / پروکسی سیستم ست نشده |
+| یوتیوب لود می‌شود ولی ویدیو نه | محدودیت شناخته‌شدهٔ Apps Script |
+| لوپ CAPTCHA | خروجی Worker از IPهای چرخشی می‌آید — طبیعی است |
+
+## 🔒 نکته‌های امنیتی
+
+- `AUTH_KEY` و رمز پنل مثل رمز عبورند — ریپو فقط `CHANGE_ME` دارد،
+  **هیچ‌وقت** مقادیر واقعی را کامیت نکنید.
+- تنظیمات پنل فقط در مرورگر شما (`localStorage`) ذخیره می‌شود.
+
+## 🙏 سپاس
+
+پروتکل رله: [denuitt1/mhr-cfw](https://github.com/denuitt1/mhr-cfw) (MIT).
+پنل مدیریت، اپ MHR Tunnel، راهنماها و بسته‌بندی: همین ریپو (MIT).

@@ -1,0 +1,11 @@
+# MHR Tunnel — Python 3.10+ required
+
+# Relay core (vendored from mhr-cfw, MIT)
+cryptography>=41.0.0      # MITM certificate generation (HTTPS interception)
+h2>=4.1.0                 # HTTP/2 multiplexing (faster relay)
+certifi>=2024.1.0; sys_platform != "win32"   # CA bundle (Windows uses system store)
+brotli>=1.1.0             # Brotli decompression (modern websites)
+zstandard>=0.22.0         # Zstandard decompression (some CDNs)
+
+# GUI: tkinter is part of the Python standard library.
+# Linux users may need: sudo apt install python3-tk
