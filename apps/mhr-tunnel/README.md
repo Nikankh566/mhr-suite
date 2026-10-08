@@ -56,8 +56,7 @@ international path** (in a full national-intranet blackout no software can help)
 
 ## 🖥️ Platforms
 
-- **Windows** — proxy via registry + settings broadcast; run `run-windows.bat`
-  or build a `.exe` (see below)
+- **Windows** — proxy via registry + settings broadcast
 - **macOS** — proxy via `networksetup` on all network services
 - **Linux** — proxy via GNOME `gsettings`; other desktops set
   `http_proxy`/`https_proxy` to `http://127.0.0.1:8085/` manually
@@ -72,15 +71,13 @@ pip install pyinstaller
 pyinstaller --onefile --windowed --name MHR-Tunnel mhr_tunnel.py
 ```
 
-The `.exe` appears in `dist/`. (`mhr_tunnel_v1.py` is the previous
-non-animated version, kept as backup.)
+The `.exe` appears in `dist/`.
 
 ## 📁 Layout
 
 ```
 apps/mhr-tunnel/
 ├── mhr_tunnel.py        # v2 app — animated GUI + engine + system proxy
-├── mhr_tunnel_v1.py     # v1 backup (simple GUI)
 ├── mhrcore/             # vendored relay core (mhr-cfw, MIT)
 ├── requirements.txt
 ├── profiles.json.example
